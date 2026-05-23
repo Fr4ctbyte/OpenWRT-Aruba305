@@ -1,0 +1,279 @@
+// SPDX-License-Identifier: GPL-2.0-only OR MIT
+/*
+ * Aruba AP-305 / IAP-305
+ *
+ * Hardware:
+ *  - SoC: Qualcomm IPQ4029 (codename Glenmorangie)
+ *  - 2.4 GHz radio: IPQ4019 integrated (AHB wifi0, chip_id 0xb, codename Dakota)
+ *  - 5 GHz radio:   Qualcomm QCA9990 / AR900B hw2.0 on PCIe (wifi2 = wifi@1,0,
+ *                   chip_id 0x9, devid 168c:0040, codename Beeliner)
+ *  - NAND 128 MiB Macronix MX30LF1G18AC
+ *  - SPI NOR 4 MiB Macronix MX25R3235F
+ *  - 512 MiB RAM
+ *
+ * Differences vs AP-365:
+ *  - AP-365 uses both IPQ4019 integrated radios (wifi0+wifi1, AHB);
+ *    AP-305 uses only wifi0 (2.4 GHz) and disables wifi1.
+ *  - AP-305 adds an external QCA9990 PCIe radio for 5 GHz.
+ *  - Aruba's calibration for the QCA9990 lives in the ART partition at
+ *    offset 0x9000 (vs 0x5000 used by the AP-365's second AHB radio).
+ *
+ * Same SPI NOR partition layout as AP-365 (confirmed by /proc/mtd dump).
+ */
+
+#include "qcom-ipq4029-aruba-glenmorangie.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Aruba AP-305";
+	compatible = "aruba,ap-305";
+
+	aliases {
+		led-boot = &led_system_green;
+		led-failsafe = &led_system_red;
+		led-running = &led_system_green;
+		led-upgrade = &led_system_red;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_system_red: system_red {
+			label = "red:system";
+			gpios = <&tlmm 46 GPIO_ACTIVE_LOW>;
+		};
+
+		led_system_green: system_green {
+			label = "green:system";
+			gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
+		};
+
+		system_amber {
+			label = "amber:system";
+			gpios = <&tlmm 49 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	watchdog {
+		compatible = "linux,wdt-gpio";
+		gpios = <&tlmm 3 GPIO_ACTIVE_LOW>;
+		hw_algo = "toggle";
+		hw_margin_ms = <1000>;
+		always-running;
+	};
+};
+
+&tlmm {
+	/*
+	 * GPIO features inherited from AP-365 family:
+	 *   3  - out - watchdog poke (linked above)
+	 *   38 - out - PCIe PERST# (declared on &pcie0 below)
+	 *   42 - out - phy-reset (active high)
+	 *   46 - out - system red LED
+	 *   49 - out - system amber LED
+	 *   50 - in  - reset button (declared in glenmorangie.dtsi)
+	 *   61 - out - system green LED
+	 */
+	phy-reset {
+		line-name = "PHY-reset";
+		gpios = <42 GPIO_ACTIVE_HIGH>;
+		gpio-hog;
+		output-high;
+	};
+};
+
+&blsp1_i2c3 {
+	power-monitor@40 {
+		/* No driver */
+		compatible = "isl,isl28022";
+		reg = <0x40>;
+	};
+
+	temperature-sensor@48 {
+		compatible = "adi,ad7416";
+		reg = <0x48>;
+	};
+};
+
+&blsp1_spi1 {
+	pinctrl-0 = <&spi_0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+	cs-gpios = <&tlmm 12 GPIO_ACTIVE_HIGH>;
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "sbl1";
+				reg = <0x0 0x40000>;
+				read-only;
+			};
+
+			partition@40000 {
+				label = "mibib";
+				reg = <0x40000 0x20000>;
+				read-only;
+			};
+
+			partition@60000 {
+				label = "qsee";
+				reg = <0x60000 0x60000>;
+				read-only;
+			};
+
+			partition@c0000 {
+				label = "cdt";
+				reg = <0xc0000 0x10000>;
+				read-only;
+			};
+
+			partition@d0000 {
+				label = "ddrparams";
+				reg = <0xd0000 0x10000>;
+				read-only;
+			};
+
+			partition@e0000 {
+				label = "u-boot-env";
+				reg = <0xe0000 0x10000>;
+			};
+
+			partition@f0000 {
+				label = "appsbl";
+				reg = <0xf0000 0x100000>;
+				read-only;
+			};
+
+			partition@1f0000 {
+				label = "ART";
+				reg = <0x1f0000 0x10000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					/* 2.4 GHz IPQ4019 AHB radio (wifi0).
+					 * Header observed: 20 2F 7F 5B 01 01 ...
+					 * len=0x2F20 (12064), crc=0x5B7F (matches Aruba
+					 * qc98xx_verify_checksum log).
+					 */
+					precal_art_1000: precal@1000 {
+						reg = <0x1000 0x2f20>;
+					};
+
+					/* Dummy cell required by parent DTSI which
+					 * references precal_art_5000 from &wifi1.
+					 * We disable wifi1 below so this is never read.
+					 */
+					precal_art_5000: precal@5000 {
+						reg = <0x5000 0x2f20>;
+					};
+
+					/* 5 GHz QCA9990 PCIe radio (wifi2).
+					 * Header observed: 20 2F DC 1C 01 01 ...
+					 * len=0x2F20 (12064), crc=0x1CDC (matches Aruba
+					 * qc98xx_verify_checksum log).
+					 */
+					precal_art_9000: precal@9000 {
+						reg = <0x9000 0x2f20>;
+					};
+				};
+			};
+
+			partition@200000 {
+				label = "osss";
+				reg = <0x200000 0x170000>;
+				read-only;
+			};
+
+			partition@370000 {
+				label = "pds";
+				reg = <0x370000 0x10000>;
+				read-only;
+			};
+
+			partition@380000 {
+				label = "apcd";
+				reg = <0x380000 0x10000>;
+				read-only;
+			};
+
+			partition@390000 {
+				label = "mfginfo";
+				reg = <0x390000 0x10000>;
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_mfginfo_1d: macaddr@1d {
+						compatible = "mac-base";
+						reg = <0x1d 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
+			};
+
+			partition@3a0000 {
+				label = "fcache";
+				reg = <0x3a0000 0x10000>;
+				read-only;
+			};
+
+			partition@3b0000 {
+				label = "osss1";
+				reg = <0x3b0000 0x50000>;
+				read-only;
+			};
+		};
+	};
+};
+
+&wifi0 {
+	qcom,ath10k-calibration-variant = "Aruba-AP-305";
+};
+
+&wifi1 {
+	/* AP-305 does not wire the IPQ4019's integrated 5 GHz AHB radio.
+	 * 5 GHz is provided by the external QCA9990 PCIe chip (wifi2).
+	 */
+	status = "disabled";
+};
+
+&pcie0 {
+	status = "okay";
+	perst-gpio = <&tlmm 38 GPIO_ACTIVE_LOW>;
+	wake-gpio = <&tlmm 50 GPIO_ACTIVE_LOW>;
+
+	bridge@0,0 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		ranges;
+
+		wifi2: wifi@1,0 {
+			compatible = "qcom,ath10k";
+			status = "okay";
+			reg = <0x00010000 0 0 0 0>;
+
+			/* QCA9990 / AR900B hw2.0 — 5 GHz.
+			 * pre-calibration read from ART @ 0x9000 (12064 bytes).
+			 */
+			nvmem-cell-names = "pre-calibration", "mac-address";
+			nvmem-cells = <&precal_art_9000>, <&macaddr_mfginfo_1d 2>;
+			qcom,ath10k-calibration-variant = "Aruba-AP-305";
+		};
+	};
+};

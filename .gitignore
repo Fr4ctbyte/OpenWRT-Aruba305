@@ -1,0 +1,34 @@
+# Local-only files that should never go public
+
+# Per-device extracted calibration (factory cal, NOT redistributable)
+cal-pci-*.bin
+cal-ahb-*.bin
+art*.dump
+art*.bin
+mtd*.dump
+mtd*.bin
+*-mtd*-*.bin
+aruba-ubifs*.bin
+
+# Personal device data
+*.mac
+uboot-env*.txt
+dmesg-*.log
+*messages*.log
+
+# Editor / OS metadata
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts (if someone clones and builds inside the repo)
+build/
+build_dir/
+staging_dir/
+bin/
+tmp/
+*.tar.gz
+*.zip

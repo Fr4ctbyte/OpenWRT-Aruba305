@@ -1,0 +1,21 @@
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 2, June 1991
+
+ Copyright (C) 1989, 1991 Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+This repository contains:
+  - Device tree source files derived from OpenWrt (GPL-2.0-only OR MIT)
+  - Build patches for OpenWrt source tree (GPL-2.0-only)
+  - Prebuilt binary images, see images/packages.manifest for package licenses
+  - Documentation in docs/ (GPL-2.0-only, same as project)
+
+Full GPL-2.0 license text:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+The OpenWrt project source is at https://github.com/openwrt/openwrt and is the
+primary source of all kernel and OpenWrt-shipped components in the binary
+images. This repository only provides additions and modifications to support
+the Aruba IAP-305 hardware.
