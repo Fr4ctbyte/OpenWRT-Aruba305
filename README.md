@@ -34,7 +34,6 @@ The key distinction vs the IAP-303 (which uses both IPQ4019 internal radios) is 
 - TPM (Atmel AT97SC3203, declared but no driver)
 - Temperature sensor (AD7416)
 - Power monitor (ISL28022, declared but no driver)
-- LuCI web UI
 
 ## Quick install
 
