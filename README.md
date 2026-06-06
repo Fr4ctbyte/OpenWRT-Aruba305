@@ -132,7 +132,7 @@ The patch creates `qcom-ipq4029-ap-305.dts` derived from `qcom-ipq4029-ap-365.dt
 
 ### 1. Watchdog GPIO
 
-On the AP-365, OpenWrt upstream uses `<&tlmm 41>`. On the AP-305 the watchdog flip-flop is wired to **`<&tlmm 3>`**. Without this fix the board reboots every ~60 s.
+On the AP-365, OpenWrt uses `<&tlmm 41>`. On the AP-305 the watchdog flip-flop is wired to **`<&tlmm 3>`**. Without this fix the board reboots every ~60 s.
 
 ### 2. wifi1 disabled, PCIe enabled
 
@@ -150,7 +150,7 @@ Aruba's proprietary driver reads cal data **directly from the MTD ART partition*
 | 2.4 GHz (IPQ4019) | `0x1000` | 12 064 B | QCA `qc98xx` |
 | 5 GHz (QCA9990) | `0x9000` | 12 064 B | QCA `qc98xx` |
 
-ath10k upstream supports the exact same format via `nvmem-cells`, with no extraction or per-device file needed. The patch adds the appropriate `precal_art_*` cells to the ART partition's `nvmem-layout` and references them from the wifi nodes.
+ath10k supports the exact same format via `nvmem-cells`, with no extraction or per-device file needed. The patch adds the appropriate `precal_art_*` cells to the ART partition's `nvmem-layout` and references them from the wifi nodes.
 
 See [docs/calibration-mechanism.md](docs/calibration-mechanism.md) for the full reverse-engineering walkthrough.
 
@@ -165,7 +165,7 @@ See [docs/calibration-mechanism.md](docs/calibration-mechanism.md) for the full 
 
 - Forum thread that started this: https://forum.openwrt.org/t/openwrt-support-for-aruba-ap-305/63218
 - Existing AP-303 / AP-365 OpenWrt support (the base): work from the OpenWrt community
-- ath10k & ath10k-ct projects for the upstream Wi-Fi stack
+- ath10k & ath10k-ct projects for the Wi-Fi stack
 - Thanks to idovitz for the GPIO findings on the IAP-305
 
 ## License
