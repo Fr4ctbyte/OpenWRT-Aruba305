@@ -92,7 +92,7 @@ iw phy
 ├── LICENSE                         GPL-2.0-only (same as OpenWrt)
 ├── patches/
 │   ├── 0001-aruba-ap-305-support.patch  combined patch (apply with `git apply`)
-│   └── qcom-ipq4029-ap-305.dts          standalone DTS for reference
+│   └── qcom-ipq4029-ap-305.dts          standalone DTS, if you'd rather drop it in by hand
 ├── images/                         prebuilt images for direct flash
 │   ├── openwrt-24.10.2-aruba_ap-305-squashfs-sysupgrade.bin
 │   ├── openwrt-24.10.2-aruba_ap-305-initramfs-uImage.itb
@@ -112,17 +112,43 @@ If you prefer building yourself (recommended for security. Why would you trust a
 git clone --branch v24.10.2 https://github.com/openwrt/openwrt.git
 cd openwrt
 ./scripts/feeds update -a && ./scripts/feeds install -a
+```
 
-# Apply this patch:
-git apply /path/to/patches/0001-aruba-ap-305-support.patch
+Then add the AP-305 support — pick one of the two:
 
-# Configure for AP-305:
+**Option 1 — Apply the patch (one command):**
+
+```sh
+git apply /path/to/this-repo/patches/0001-aruba-ap-305-support.patch
+```
+
+**Option 2 — Drop in the files by hand (if you want to see what changes):**
+
+```sh
+# 1. Copy the DTS into the tree:
+cp /path/to/this-repo/patches/qcom-ipq4029-ap-305.dts \
+   target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/
+
+# 2. Register the device profile in image/generic.mk:
+cat <<'EOF' >> target/linux/ipq40xx/image/generic.mk
+
+define Device/aruba_ap-305
+	$(call Device/aruba_glenmorangie)
+	DEVICE_MODEL := AP-305
+	DEVICE_PACKAGES := kmod-hwmon-ad7418 ath10k-firmware-qca99x0-ct
+	DEVICE_DTS_CONFIG := Glenmorangie@1
+endef
+TARGET_DEVICES += aruba_ap-305
+EOF
+```
+
+Then select the profile and build:
+
+```sh
 make defconfig
 echo "CONFIG_TARGET_PROFILE=\"DEVICE_aruba_ap-305\"" >> .config
 echo "CONFIG_TARGET_ipq40xx_generic_DEVICE_aruba_ap-305=y" >> .config
 make defconfig
-
-# Build:
 make -j$(nproc)
 
 # Output:

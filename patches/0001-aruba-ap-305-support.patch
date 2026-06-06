@@ -17,6 +17,8 @@ The watchdog GPIO pin differs from the AP-365: TLMM 3 on AP-305 vs
 TLMM 41 on AP-365. Without this fix the board reboots every ~60s.
 
 Not signed-off — this is a documentation patch for the community.
+
+This patch has not been tested thoroughly, USE AT YOUR OWN RISK.
 ---
  target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts | 279 ++++++++++++++++++
  target/linux/ipq40xx/image/generic.mk                                          |   8 +
