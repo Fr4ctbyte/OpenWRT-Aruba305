@@ -4,7 +4,7 @@ Patches and prebuilt images to run **OpenWrt 24.10.2** on the **Aruba Instant AP
 
 > **Notes**
 > - Community port, not an official OpenWrt target — **use at your own risk**.
-> - I haven't submitted this upstream. Treat it as documentation and sharing, not a maintained fork.
+> - I haven't submitted to the OpenWRT project. Treat it as documentation and sharing, not a maintained fork.
 > - Work in progress: I've been tinkering with this AP for over a year.
 > - Expect some bugs. I've tested a lot, but a few things still need polish, and I might be wrong on some non-critical details.
 
