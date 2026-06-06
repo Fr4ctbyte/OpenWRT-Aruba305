@@ -18,16 +18,16 @@ TLMM 41 on AP-365. Without this fix the board reboots every ~60s.
 
 Not signed-off — this is a documentation patch for the community.
 ---
- target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts | 280 ++++++++++++++++++
+ target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts | 279 ++++++++++++++++++
  target/linux/ipq40xx/image/generic.mk                                          |   8 +
- 2 files changed, 288 insertions(+), 0 deletions(-)
+ 2 files changed, 287 insertions(+), 0 deletions(-)
 
 diff --git a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts
 new file mode 100644
 index 0000000..1111111
 --- /dev/null
 +++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4029-ap-305.dts
-@@ -0,0 +1, @@
+@@ -0,0 +1,279 @@
 +// SPDX-License-Identifier: GPL-2.0-only OR MIT
 +/*
 + * Aruba AP-305 / IAP-305
