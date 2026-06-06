@@ -37,7 +37,10 @@ The key distinction vs the IAP-303 (which uses both IPQ4019 internal radios) is 
 
 ## Quick install
 
-This assumes OpenWrt is already running on the AP (any flavor: `aruba_ap-303`, `aruba_ap-365`, or an earlier build of this one).
+Two paths depending on what's currently on the AP:
+
+- **Stock ArubaOS** → follow the bootstrap section right below to get a working OpenWrt running first.
+- **Already running OpenWrt** (any flavor: `aruba_ap-303`, `aruba_ap-365`, or an earlier AP-305 build) → skip to [From any running OpenWrt](#from-any-running-openwrt--flash-the-ap-305-image).
 
 ### First time on a stock ArubaOS AP
 
@@ -88,7 +91,7 @@ iw phy
 ├── README.md                       this file
 ├── LICENSE                         GPL-2.0-only (same as OpenWrt)
 ├── patches/
-│   ├── 0001-aruba-ap-305-support.patch  combined patch (apply with `git am` or `git apply`)
+│   ├── 0001-aruba-ap-305-support.patch  combined patch (apply with `git apply`)
 │   └── qcom-ipq4029-ap-305.dts          standalone DTS for reference
 ├── images/                         prebuilt images for direct flash
 │   ├── openwrt-24.10.2-aruba_ap-305-squashfs-sysupgrade.bin
@@ -103,7 +106,7 @@ iw phy
 
 ## Build from source
 
-If you prefer building yourself (recommended for security — why would you trust a random repo on the internet anyway?):
+If you prefer building yourself (recommended for security. Why would you trust a random repo on the internet anyway?):
 
 ```sh
 git clone --branch v24.10.2 https://github.com/openwrt/openwrt.git
