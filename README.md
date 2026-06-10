@@ -62,11 +62,15 @@ If the script fails on `export` (Device or resource busy), the sysfs base may di
 ### From any running OpenWrt → flash the AP-305 image
 
 ```sh
-wget https://github.com/Fr4ctbyte/OpenWRT-Aruba305/raw/main/images/openwrt-24.10.2-aruba_ap-305-squashfs-sysupgrade.bin -O /tmp/sysupgrade.bin
+wget https://github.com/Fr4ctbyte/openwrt/releases/latest/download/openwrt-ipq40xx-generic-aruba_ap-305-squashfs-sysupgrade.bin -O /tmp/sysupgrade.bin
 sysupgrade -F -n /tmp/sysupgrade.bin
 # -F : required because the compatible string changes (e.g. aruba,ap-365 → aruba,ap-305)
 # -n : do not preserve config (target differs)
 ```
+
+Prebuilt images live on the [releases page of my OpenWrt fork](https://github.com/Fr4ctbyte/openwrt/releases):
+- `...squashfs-sysupgrade.bin` — the **base** image (device defaults + LuCI), for flashing to NAND
+- `...initramfs-uImage.itb` (a.k.a. `ipq40xx.ari`) — the **ramboot** image (minimal, <8 MB), for TFTP RAM boot without touching the flash
 
 ## Verification after reboot
 
@@ -93,10 +97,10 @@ iw phy
 ├── patches/
 │   ├── 0001-aruba-ap-305-support.patch  combined patch (apply with `git apply`)
 │   └── qcom-ipq4029-ap-305.dts          standalone DTS, if you'd rather drop it in by hand
-├── images/                         prebuilt images for direct flash
-│   ├── openwrt-24.10.2-aruba_ap-305-squashfs-sysupgrade.bin
-│   ├── openwrt-24.10.2-aruba_ap-305-initramfs-uImage.itb
-│   └── packages.manifest                list of included packages
+├── configs/                        build-config seeds (expand with `make defconfig`)
+│   ├── base.config                      device defaults + LuCI — the public sysupgrade image
+│   ├── ramboot.config                   minimal initramfs (<8 MB, XZ) for TFTP RAM boot
+│   └── build-ap305.sh                   builds every configs/*.config seed in one go
 └── docs/
     ├── hardware.md                 detailed hardware identification
     ├── calibration-mechanism.md    how Aruba stores radio calibration in ART
@@ -106,7 +110,7 @@ iw phy
 
 ## Build from source
 
-If you prefer building yourself (recommended for security. Why would you trust a random repo on the internet anyway?):
+If you prefer building yourself (Why would you trust a random repo on the internet anyway?):
 
 ```sh
 git clone --branch v24.10.2 https://github.com/openwrt/openwrt.git
@@ -188,7 +192,7 @@ See [docs/calibration-mechanism.md](docs/calibration-mechanism.md) for the full 
 - **The calibration is per-device.** Each AP-305 has its own factory-calibrated cal data in its own ART. The build itself contains no calibration — it only declares the nvmem-cell paths. ath10k reads the cal from your device's ART at boot. **Don't redistribute another device's ART dump.**
 - **Watchdog GPIO 3 is empirical.** Confirmed working on my IAP-305-RW. If your AP reboots every minute despite this fix, the wiring may differ — try toggling other TLMM pins from userspace to find the right one.
 - **Compatible string change** requires `sysupgrade -F` at first flash.
-- **LEDs**: GPIOs 46/49/61 (red/amber/green system) are inherited from the AP-365 DTS. If some LEDs stay dark or show the wrong color on your AP-305, adjust the `leds` block in the DTS. Mine ends up orange — I plan to fix it someday :)
+- **LEDs**: **Still testing (2026-06-08)**.
 
 ## Credits
 

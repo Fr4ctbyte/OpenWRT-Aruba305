@@ -19,6 +19,17 @@
  *    offset 0x9000 (vs 0x5000 used by the AP-365's second AHB radio).
  *
  * Same SPI NOR partition layout as AP-365 (confirmed by /proc/mtd dump).
+ *
+ * LED / GPIO map corrected from the ArubaOS Glenmorangie device tree
+ * (kernel-extracted-aos-full-31M.itb -> aruba_pin_mux/led = 37,42,51,52,61,68)
+ * and verified live on an IAP-305 by toggling GPIOs:
+ *   - gpio42 = system LED amber   (active high)   [confirmed]
+ *   - gpio68 = system LED green   (active high)   [inferred, verify on boot]
+ *   - gpio51 = wifi   LED green   (active high)   [confirmed]
+ *   - gpio61 = wifi   LED amber   (active high)   [confirmed]
+ * The previous 46/49/61 LEDs were inherited from the AP-365 DTS and are WRONG
+ * for the AP-305. gpio42 is NOT a PHY reset (the old hog forced the amber on);
+ * the real PHY reset/enable is gpio47 (held high), hogged below.
  */
 
 #include "qcom-ipq4029-aruba-glenmorangie.dtsi"
@@ -29,28 +40,39 @@
 	compatible = "aruba,ap-305";
 
 	aliases {
-		led-boot = &led_system_green;
-		led-failsafe = &led_system_red;
+		led-boot = &led_system_amber;
+		led-failsafe = &led_system_amber;
 		led-running = &led_system_green;
-		led-upgrade = &led_system_red;
+		led-upgrade = &led_system_amber;
 	};
 
 	leds {
 		compatible = "gpio-leds";
 
-		led_system_red: system_red {
-			label = "red:system";
-			gpios = <&tlmm 46 GPIO_ACTIVE_LOW>;
-		};
-
-		led_system_green: system_green {
-			label = "green:system";
-			gpios = <&tlmm 61 GPIO_ACTIVE_LOW>;
-		};
-
-		system_amber {
+		led_system_amber: system-amber {
 			label = "amber:system";
-			gpios = <&tlmm 49 GPIO_ACTIVE_LOW>;
+			gpios = <&tlmm 42 GPIO_ACTIVE_HIGH>;
+		};
+
+		led_system_green: system-green {
+			label = "green:system";
+			/* INFERRED by elimination from ArubaOS LED pin list;
+			 * confirm on first boot (system LED should be green).
+			 * gpio68 is in the inherited nand pin group but, like
+			 * gpio61, leds-gpio claims it as a plain GPIO. */
+			gpios = <&tlmm 68 GPIO_ACTIVE_HIGH>;
+		};
+
+		wifi-green {
+			label = "green:wifi";
+			gpios = <&tlmm 51 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "phy1tpt";	/* 5 GHz activity */
+		};
+
+		wifi-amber {
+			label = "amber:wifi";
+			gpios = <&tlmm 61 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "phy0tpt";	/* 2.4 GHz activity */
 		};
 	};
 
@@ -65,18 +87,21 @@
 
 &tlmm {
 	/*
-	 * GPIO features inherited from AP-365 family:
+	 * GPIO map (AP-305 / Glenmorangie), corrected:
 	 *   3  - out - watchdog poke (linked above)
 	 *   38 - out - PCIe PERST# (declared on &pcie0 below)
-	 *   42 - out - phy-reset (active high)
-	 *   46 - out - system red LED
-	 *   49 - out - system amber LED
+	 *   39 - out - "reset watchdog status flipflop" (Aruba) - leave alone
+	 *   40 - out - "enable watchdog" (Aruba) - leave alone
+	 *   42 - out - system amber LED (was wrongly hogged as phy-reset)
+	 *   47 - out - PHY reset/enable (active high, held high) - hogged below
 	 *   50 - in  - reset button (declared in glenmorangie.dtsi)
-	 *   61 - out - system green LED
+	 *   51 - out - wifi green LED
+	 *   61 - out - wifi amber LED
+	 *   68 - out - system green LED (inferred)
 	 */
 	phy-reset {
 		line-name = "PHY-reset";
-		gpios = <42 GPIO_ACTIVE_HIGH>;
+		gpios = <47 GPIO_ACTIVE_HIGH>;
 		gpio-hog;
 		output-high;
 	};

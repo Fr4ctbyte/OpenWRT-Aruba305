@@ -51,30 +51,34 @@
 
 ## GPIO summary
 
-Note: I'm not done reverse-engineering the GPIOs — the LEDs still need fixing on my unit.
+Note: GPIO/LED mapping **Still Testing 2026-06-08** 
 
 GPIOs of interest on the IPQ4019 TLMM controller:
 
 | Pin | Direction | Purpose | Notes |
 |---|---|---|---|
-| 3 | out | **Hardware watchdog poke** | Differs from AP-365 (which uses pin 41). Required — without it the AP reboots every ~60 s |
-| 6 | mux | MDIO | |
-| 7 | mux | MDC | |
+| 3 | out | **Hardware watchdog poke** (active-low toggle) | Differs from AP-365 (pin 41). Required. **Never toggle** |
+| 6 / 7 | mux | MDIO / MDC | |
 | 8 / 9 | mux | UART1 (BLE radio) | |
 | 10 / 11 | mux | I2C0 (TPM, sensors) | |
 | 12 | out | SPI0 chip-select (NOR flash) | |
 | 13–15 | mux | SPI0 (NOR flash) | |
 | 16 / 17 | mux | UART0 (console) | 9600n8 |
+| 35 | out | **WD_LATCH_CLR_L** (watchdog) | **Never toggle** |
 | 38 | out | PCIe PERST# (active low) | Reset for QCA9990 |
-| 39 | out | "reset watchdog status flipflop" | Per Aruba comments |
-| 40 | out | "enable watchdog" | Per Aruba comments |
+| 39 | out | "reset watchdog status flipflop" (Aruba) | driving it → **instant reboot** |
+| 40 | out | "enable watchdog" (Aruba) | driving it → **instant reboot** |
 | 41 | (legacy) | Watchdog poke on AP-365 — NOT on AP-305 | Don't use on AP-305 |
-| 42 | out | PHY reset (active high) | Pulled high at boot |
-| 46 | out | System LED red | Active low |
-| 49 | out | System LED amber | Active low |
+| 42 | out | **System LED amber** (active-high) | was wrongly labeled phy-reset & hogged → THE stuck-amber cause |
+| 46 | — | **unused** on AP-305 | was wrongly labeled "system red" (toggling = no effect) |
+| 47 | out | **PHY reset/enable** (active-high, held high) | the real phy-reset; driving low → **LAN drops** |
+| 49 | — | **unused** on AP-305 | was wrongly labeled "system amber" (no effect) |
 | 50 | in | PCIe wake / Reset button (dual purpose) | |
-| 53–69 | mux | NAND pins | |
-| 61 | out | System LED green | Active low |
+| 51 | out | **Wi-Fi LED green** (active-high) | |
+| 52 | — | unused (no visible LED) | |
+| 53–69 | mux | NAND pins | group over-broad: also lists 61 & 68, which are LEDs |
+| 61 | out | **Wi-Fi LED amber** (active-high)  | leds-gpio reclaims it from the NAND group |
+| 68 | out | **System LED green** (active-high) | reclaim from NAND group; verify on first boot |
 
 ## Bootloader
 
@@ -92,8 +96,9 @@ Kernel 6.6 (OpenWrt 24.10.2) puts the TLMM gpiochip base at **512**. So:
 | `/sys/class/gpio/gpio515` | 3 | Watchdog poke |
 | `/sys/class/gpio/gpio550` | 38 | PCIe PERST# |
 | `/sys/class/gpio/gpio562` | 50 | Reset / PCIe wake |
-| `/sys/class/gpio/gpio558` | 46 | LED red |
-| `/sys/class/gpio/gpio561` | 49 | LED amber |
-| `/sys/class/gpio/gpio573` | 61 | LED green |
+| `/sys/class/gpio/gpio554` | 42 | System LED amber |
+| `/sys/class/gpio/gpio580` | 68 | System LED green (inferred) |
+| `/sys/class/gpio/gpio563` | 51 | Wi-Fi LED green |
+| `/sys/class/gpio/gpio573` | 61 | Wi-Fi LED amber |
 
 To map a desired TLMM pin to its sysfs ID: `sysfs_id = gpiochip_base + tlmm_offset`. The base depends on kernel version; verify with `cat /sys/class/gpio/gpiochip*/base`.
