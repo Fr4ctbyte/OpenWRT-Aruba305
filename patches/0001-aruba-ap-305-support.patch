@@ -331,7 +331,7 @@ index 0000000000..66c1b49012
 +	status = "okay";
 +};
 diff --git a/target/linux/ipq40xx/image/generic.mk b/target/linux/ipq40xx/image/generic.mk
-index 21841f4bf1..4e9e5f7c3d 100644
+index 86bcaf8406..a7a8ea10cf 100644
 --- a/target/linux/ipq40xx/image/generic.mk
 +++ b/target/linux/ipq40xx/image/generic.mk
 @@ -198,6 +198,14 @@ define Device/aruba_ap-365

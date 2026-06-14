@@ -57,25 +57,26 @@ GPIOs of interest on the IPQ4019 TLMM controller:
 
 | Pin | Direction | Purpose | Notes |
 |---|---|---|---|
+| 2 | out | **board reset** (active-low) | driving it **low = instant reboot** (proven); never drive, leave high |
 | 3 | out | **Hardware watchdog poke** (active-low toggle) | Differs from AP-365 (pin 41). Required. **Never toggle** |
 | 6 / 7 | mux | MDIO / MDC | |
-| 8 / 9 | mux | UART1 (BLE radio) | |
+| 8 / 9 | mux | UART (`blsp_uart1`) | console **or** CC2540 BLE (unconfirmed) |
 | 10 / 11 | mux | I2C0 (TPM, sensors) | |
 | 12 | out | SPI0 chip-select (NOR flash) | |
 | 13–15 | mux | SPI0 (NOR flash) | |
-| 16 / 17 | mux | UART0 (console) | 9600n8 |
+| 16 / 17 | mux | UART (`blsp_uart0`) | console **or** CC2540 BLE (unconfirmed); console = 9600 8N1 |
 | 18 | out | **USB VBUS enable** (load-switch, active-high, hogged) | powers the USB port |
-| 35 | out | **WD_LATCH_CLR_L** (watchdog) | **Never toggle** |
+| 35 | out | function unconfirmed | driven high both sides; candidate `WD_LATCH_CLR_L` (watchdog latch-clear); no effect when driven |
 | 37 | out | **System LED green** (active-high) | |
 | 38 | out | PCIe PERST# (active low) | Reset for QCA9990 |
-| 39 | out | "reset watchdog status flipflop" (Aruba) | driving it → **instant reboot** |
-| 40 | out | "enable watchdog" (Aruba) | driving it → **instant reboot** |
+| 39 | out | "reset watchdog status flipflop" (Aruba) | **leave alone** (may reboot the board) |
+| 40 | out | "enable watchdog" (Aruba) | **leave alone** (may reboot the board) |
 | 41 | in | **unused** on AP-305 (unclaimed, reads low) |  |
 | 42 | out | **System LED amber** (active-high) | |
 | 46 | — | **unused** on AP-305 | no effect when driven |
 | 47 | out | **PHY reset/enable** (active-high, held high) | driving low → **LAN drops** |
-| 49 | out | stock drives HIGH (hogged to mirror) | Unknow |
-| 50 | in | PCIe wake / Reset button (dual purpose) | |
+| 49 | out | stock drives HIGH (hogged to mirror) | Unknown |
+| 50 | in | **PCIe wake** or **reset button** (to confirm) | DTS declares `wake-gpio` in `&pcie0`; GPIO map read it as the reset button |
 | 51 | out | **Wi-Fi LED green** (active-high) | |
 | 52 | out | **System LED red** (active-high) | |
 | 53–69 | mux | NAND pins | group over-broad: also lists 61 & 68, which are LEDs |
@@ -87,11 +88,11 @@ GPIOs of interest on the IPQ4019 TLMM controller:
 - **APBoot 2.4.0.8** (build 64221), built 2018-03-28
 - U-Boot fork by Aruba — has custom commands like `netget` (TFTP fetch) and `apenv_backup`
 - Default env: `boardname=Glenmorangie`, `bootcmd=run nandboot_openwrt`
-- Console: 9600 8N1 on UART0 (`ttyMSM1` from Linux side)
+- Console: 9600 8N1 (`ttyMSM1` from Linux side; the UART pin pair is unconfirmed — see GPIO 8/9 vs 16/17)
 
 ## sysfs GPIO base mapping
 
-Kernel 6.6 (OpenWrt 24.10.2) puts the TLMM gpiochip base at **512**. So:
+Kernel 6.6 (OpenWrt 24.10.7) puts the TLMM gpiochip base at **512**. So:
 
 | Sysfs path | TLMM offset | Pin role (this device) |
 |---|---|---|

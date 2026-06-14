@@ -1,4 +1,4 @@
-# Installation guide — Aruba IAP-305 → OpenWrt 24.10.2
+# Installation guide — Aruba IAP-305 → OpenWrt 24.10.7
 
 ## Prerequisites
 
@@ -161,7 +161,7 @@ apboot> osinfo
 ```
 # Representative osinfo output:
 Partition 0:  ArubaOS x.x.x.x      <- aos0 / mtd0  (factory)
-Partition 1:  OpenWrt 24.10.2      <- aos1 / mtd1  (your install)
+Partition 1:  OpenWrt 24.10.7      <- aos1 / mtd1  (your install)
 ```
 
 **Option 1 — get a working OpenWrt back.** If you only lost the boot config, re-boot OpenWrt from `aos1`:

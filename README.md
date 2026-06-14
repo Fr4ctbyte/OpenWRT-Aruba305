@@ -1,6 +1,6 @@
 # OpenWrt support for Aruba IAP-305
 
-Patches and prebuilt images to run **OpenWrt 24.10.2** on the **Aruba Instant AP-305** (IAP-305-RW), with both radios functional including the external 5 GHz Qualcomm QCA9990.
+Patches and prebuilt images to run **OpenWrt 24.10.7** on the **Aruba Instant AP-305** (IAP-305-RW), with both radios functional including the external 5 GHz Qualcomm QCA9990.
 
 > **Notes**
 > - Community port, not an official OpenWrt target — **use at your own risk**.
@@ -26,7 +26,7 @@ The key distinction vs the IAP-303 (which uses both IPQ4019 internal radios) is 
 
 ## What works
 
-- Boot from NAND (kernel 6.6.93)
+- Boot from NAND (kernel 6.6.141)
 - Ethernet (single gigabit port via QCA8K switch)
 - 2.4 GHz Wi-Fi (IPQ4019 AHB, phy0/wlan0) with factory calibration
 - **5 GHz Wi-Fi (QCA9990 PCIe, phy1/wlan1) with factory calibration**
@@ -124,7 +124,7 @@ iw phy
 If you prefer building yourself (Why would you trust a random repo on the internet anyway?):
 
 ```sh
-git clone --branch v24.10.2 https://github.com/openwrt/openwrt.git
+git clone --branch v24.10.7 https://github.com/openwrt/openwrt.git
 cd openwrt
 ./scripts/feeds update -a && ./scripts/feeds install -a
 ```
