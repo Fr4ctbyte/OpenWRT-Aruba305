@@ -5,7 +5,7 @@
 - Aruba IAP-305-RW (or compatible variant)
 - USB-TTL serial cable (3 wires: GND, RX, TX) for console access during the initial install
 - A TFTP server reachable from the AP
-- The two prebuilt AP-305 images from the [latest release](https://github.com/Fr4ctbyte/openwrt/releases/latest):
+- The two prebuilt AP-305 images from the [latest release](https://github.com/Fr4ctbyte/OpenWRT-Aruba305/releases/latest):
   - `openwrt-ipq40xx-generic-aruba_ap-305-initramfs-uImage.itb` — the **ramboot** image (TFTP RAM boot, step 3). **⚠️ This file must be renamed to `ipq40xx.ari` for the TFTP boot to work — APBoot only ever fetches that one name (see step 3).**
   - `openwrt-ipq40xx-generic-aruba_ap-305-squashfs-sysupgrade.bin` — the **base** image (flashed to NAND, step 5)
 
