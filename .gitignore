@@ -32,3 +32,6 @@ bin/
 tmp/
 *.tar.gz
 *.zip
+docs/gpio-led-map.md
+patches/qcom-ipq4029-ap-305.dts.bak-led
+configs/build-ap305.sh

@@ -8,7 +8,7 @@
 | 2.4 GHz radio | IPQ4019 integrated, AHB @ `a000000.wifi` (chip_id `0xb`, codename Dakota) | `ath10k_ahb` |
 | 5 GHz radio | **Qualcomm QCA9990 / AR900B hw2.0**, PCIe `0000:01:00.0` (devid `168c:0040`, chip_id `0x9`, codename Beeliner) — 3x3:3 MU-MIMO | `ath10k_pci` |
 | Ethernet switch | Qualcomm Atheros QCA8K | `qca8k-ipq4019` |
-| Ethernet PHY | Atheros AR8035-A (PoE input) | upstream |
+| Ethernet PHY | Atheros AR8035-A (PoE input) | `at803x` |
 | Bluetooth | Texas Instruments CC2540T on UART1 (BLSP1) | none in OpenWrt — declared but unused |
 | TPM | Atmel AT97SC3203 on I2C @ 0x29 | declared, no driver |
 | Temp sensor | Analog Devices AD7416 on I2C @ 0x48 | `hwmon-ad7418` |
@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | mtd0 | 0x00000000 | 32 MiB | aos0 | Primary firmware partition (ArubaOS kernel+rootfs OR your OpenWrt) |
 | mtd1 | 0x02000000 | 32 MiB | ubi (= aos1) | Secondary firmware partition (use this for OpenWrt sysupgrade) |
-| mtd2 | 0x04000000 | 64 MiB | aruba-ubifs | Data partition (read-only by default in upstream OpenWrt DTS) |
+| mtd2 | 0x04000000 | 64 MiB | aruba-ubifs | Data partition (read-only by default in OpenWrt DTS) |
 
 ### SPI NOR (4 MiB)
 
@@ -41,7 +41,7 @@
 | mtd7 | 0x0d0000 | 64 KiB | ddrparams | DDR timing parameters (read-only) |
 | mtd8 | 0x0e0000 | 64 KiB | u-boot-env | APBoot environment (writable) |
 | mtd9 | 0x0f0000 | 1024 KiB | appsbl | APBoot binary (read-only) |
-| **mtd10** | **0x1f0000** | **64 KiB** | **ART** | **Radio calibration data** ⭐ |
+| **mtd10** | **0x1f0000** | **64 KiB** | **ART** | **Radio calibration data** |
 | mtd11 | 0x200000 | 1.5 MiB | osss | OS Subset Storage (read-only) |
 | mtd12 | 0x370000 | 64 KiB | pds | Persistent Device Settings (read-only) |
 | mtd13 | 0x380000 | 64 KiB | apcd | AP Config Data (read-only) |
@@ -51,7 +51,7 @@
 
 ## GPIO summary
 
-Note: GPIO/LED mapping **Still Testing 2026-06-08** 
+The AP-305 has two tricolor LEDs (System/Status and Wi-Fi/WLAN); all elements are active-high. 
 
 GPIOs of interest on the IPQ4019 TLMM controller:
 
@@ -64,21 +64,23 @@ GPIOs of interest on the IPQ4019 TLMM controller:
 | 12 | out | SPI0 chip-select (NOR flash) | |
 | 13–15 | mux | SPI0 (NOR flash) | |
 | 16 / 17 | mux | UART0 (console) | 9600n8 |
+| 18 | out | **USB VBUS enable** (load-switch, active-high, hogged) | powers the USB port |
 | 35 | out | **WD_LATCH_CLR_L** (watchdog) | **Never toggle** |
+| 37 | out | **System LED green** (active-high) | |
 | 38 | out | PCIe PERST# (active low) | Reset for QCA9990 |
 | 39 | out | "reset watchdog status flipflop" (Aruba) | driving it → **instant reboot** |
 | 40 | out | "enable watchdog" (Aruba) | driving it → **instant reboot** |
-| 41 | (legacy) | Watchdog poke on AP-365 — NOT on AP-305 | Don't use on AP-305 |
-| 42 | out | **System LED amber** (active-high) | was wrongly labeled phy-reset & hogged → THE stuck-amber cause |
-| 46 | — | **unused** on AP-305 | was wrongly labeled "system red" (toggling = no effect) |
-| 47 | out | **PHY reset/enable** (active-high, held high) | the real phy-reset; driving low → **LAN drops** |
-| 49 | — | **unused** on AP-305 | was wrongly labeled "system amber" (no effect) |
+| 41 | in | **unused** on AP-305 (unclaimed, reads low) |  |
+| 42 | out | **System LED amber** (active-high) | |
+| 46 | — | **unused** on AP-305 | no effect when driven |
+| 47 | out | **PHY reset/enable** (active-high, held high) | driving low → **LAN drops** |
+| 49 | out | stock drives HIGH (hogged to mirror) | Unknow |
 | 50 | in | PCIe wake / Reset button (dual purpose) | |
 | 51 | out | **Wi-Fi LED green** (active-high) | |
-| 52 | — | unused (no visible LED) | |
+| 52 | out | **System LED red** (active-high) | |
 | 53–69 | mux | NAND pins | group over-broad: also lists 61 & 68, which are LEDs |
 | 61 | out | **Wi-Fi LED amber** (active-high)  | leds-gpio reclaims it from the NAND group |
-| 68 | out | **System LED green** (active-high) | reclaim from NAND group; verify on first boot |
+| 68 | out | **Wi-Fi LED red** (active-high) | reclaim from NAND group |
 
 ## Bootloader
 
@@ -96,9 +98,11 @@ Kernel 6.6 (OpenWrt 24.10.2) puts the TLMM gpiochip base at **512**. So:
 | `/sys/class/gpio/gpio515` | 3 | Watchdog poke |
 | `/sys/class/gpio/gpio550` | 38 | PCIe PERST# |
 | `/sys/class/gpio/gpio562` | 50 | Reset / PCIe wake |
+| `/sys/class/gpio/gpio549` | 37 | System LED green |
 | `/sys/class/gpio/gpio554` | 42 | System LED amber |
-| `/sys/class/gpio/gpio580` | 68 | System LED green (inferred) |
+| `/sys/class/gpio/gpio564` | 52 | System LED red |
 | `/sys/class/gpio/gpio563` | 51 | Wi-Fi LED green |
 | `/sys/class/gpio/gpio573` | 61 | Wi-Fi LED amber |
+| `/sys/class/gpio/gpio580` | 68 | Wi-Fi LED red |
 
 To map a desired TLMM pin to its sysfs ID: `sysfs_id = gpiochip_base + tlmm_offset`. The base depends on kernel version; verify with `cat /sys/class/gpio/gpiochip*/base`.

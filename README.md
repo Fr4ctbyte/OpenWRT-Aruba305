@@ -27,26 +27,32 @@ The key distinction vs the IAP-303 (which uses both IPQ4019 internal radios) is 
 ## What works
 
 - Boot from NAND (kernel 6.6.93)
-- Ethernet (gigabit via QCA8K switch)
+- Ethernet (single gigabit port via QCA8K switch)
 - 2.4 GHz Wi-Fi (IPQ4019 AHB, phy0/wlan0) with factory calibration
 - **5 GHz Wi-Fi (QCA9990 PCIe, phy1/wlan1) with factory calibration**
 - Hardware watchdog (GPIO-toggle, TLMM 3)
 - TPM (Atmel AT97SC3203, declared but no driver)
 - Temperature sensor (AD7416)
 - Power monitor (ISL28022, declared but no driver)
+- USB host port (Qualcomm dwc3 / xHCI)
+- Status & Wi-Fi LEDs
 
 ## Quick install
 
 Two paths depending on what's currently on the AP:
 
-- **Stock ArubaOS** → follow the bootstrap section right below to get a working OpenWrt running first.
+- **Stock ArubaOS** → follow the first-time steps right below to get a working OpenWrt running first.
 - **Already running OpenWrt** (any flavor: `aruba_ap-303`, `aruba_ap-365`, or an earlier AP-305 build) → skip to [From any running OpenWrt](#from-any-running-openwrt--flash-the-ap-305-image).
 
 ### First time on a stock ArubaOS AP
 
-Boot the **`aruba_ap-303`** image first. The OpenWrt wiki has a [working install procedure for AP-303](https://openwrt.org/toh/aruba/ap-303), and the same procedure applies to the AP-305 (same Glenmorangie codename, same bootloader, same NAND layout). Don't worry that 5 GHz won't come up and the watchdog will reboot you every ~60 s.
+TFTP RAM-boot the AP-305 **ramboot** image (the `...initramfs-uImage.itb` from the [latest release](https://github.com/Fr4ctbyte/openwrt/releases/latest)) over the serial console, then flash the base image to NAND with `sysupgrade`.
 
-You need to tickle the watchdog a little to keep the AP from going into a reboot loop:
+> ⚠️ **The ramboot file must be renamed to `ipq40xx.ari` for TFTP to work.** APBoot always fetches one fixed filename.
+
+See **[docs/installation.md](docs/installation.md)** for the full step-by-step (serial pinout, APBoot TFTP/ramboot commands, then the NAND flash).
+
+**If the AP reboots every ~60 s (watchdog):** the AP-305 image kicks the watchdog on **TLMM 3** automatically, so this normally won't happen. But if your batch is wired differently, or you started from a different OpenWrt image (see below), kick it from userspace once OpenWrt is up:
 
 ```sh
 echo 515 > /sys/class/gpio/export
@@ -57,7 +63,13 @@ while true; do
 done &
 ```
 
-If the script fails on `export` (Device or resource busy), the sysfs base may differ on your kernel — see [docs/hardware.md](docs/hardware.md#sysfs-gpio-base-mapping) for the math.
+If `export` fails (`Device or resource busy`), the sysfs base may differ on your kernel. See [docs/hardware.md](docs/hardware.md#sysfs-gpio-base-mapping) for the math.
+
+<details>
+<summary>Starting from a different OpenWrt image (e.g. the official <code>aruba_ap-303</code>) instead?</summary>
+
+The official OpenWrt [AP-303 install procedure](https://openwrt.org/toh/aruba/ap-303) also works (same Glenmorangie codename, bootloader and NAND layout). The catch: 5 GHz won't come up, and the watchdog **isn't** kicked, so you'll reboot every ~60 s until you run the userspace watchdog kick from the note above.
+</details>
 
 ### From any running OpenWrt → flash the AP-305 image
 
@@ -99,8 +111,7 @@ iw phy
 │   └── qcom-ipq4029-ap-305.dts          standalone DTS, if you'd rather drop it in by hand
 ├── configs/                        build-config seeds (expand with `make defconfig`)
 │   ├── base.config                      device defaults + LuCI — the public sysupgrade image
-│   ├── ramboot.config                   minimal initramfs (<8 MB, XZ) for TFTP RAM boot
-│   └── build-ap305.sh                   builds every configs/*.config seed in one go
+│   └── ramboot.config                   minimal initramfs (<8 MB, XZ) for TFTP RAM boot
 └── docs/
     ├── hardware.md                 detailed hardware identification
     ├── calibration-mechanism.md    how Aruba stores radio calibration in ART
@@ -161,7 +172,7 @@ ls bin/targets/ipq40xx/generic/openwrt-*-aruba_ap-305-*
 
 ## Key DTS modifications
 
-The patch creates `qcom-ipq4029-ap-305.dts` derived from `qcom-ipq4029-ap-365.dts` with three changes:
+The patch creates `qcom-ipq4029-ap-305.dts` derived from `qcom-ipq4029-ap-365.dts` with four changes:
 
 ### 1. Watchdog GPIO
 
@@ -187,12 +198,15 @@ ath10k supports the exact same format via `nvmem-cells`, with no extraction or p
 
 See [docs/calibration-mechanism.md](docs/calibration-mechanism.md) for the full reverse-engineering walkthrough.
 
+### 4. LED / GPIO map
+
+The AP-365's LED nodes (gpio 46/49/61) and a `phy-reset` GPIO-hog on gpio42 were wrong for the AP-305 — the hog forced the system LED permanently amber. They're corrected to the device's two tricolor LEDs, decoded from the ArubaOS Glenmorangie device tree and verified live: System 37/52/42 (green/red/amber) and Wi-Fi 51/68/61 (green/red/amber), all active-high, declared with `function`/`color`. The `phy-reset` hog moves gpio42 → gpio47 (the real PHY enable line). Full map in [docs/hardware.md](docs/hardware.md#gpio-summary).
+
 ## Important caveats
 
 - **The calibration is per-device.** Each AP-305 has its own factory-calibrated cal data in its own ART. The build itself contains no calibration — it only declares the nvmem-cell paths. ath10k reads the cal from your device's ART at boot. **Don't redistribute another device's ART dump.**
 - **Watchdog GPIO 3 is empirical.** Confirmed working on my IAP-305-RW. If your AP reboots every minute despite this fix, the wiring may differ — try toggling other TLMM pins from userspace to find the right one.
 - **Compatible string change** requires `sysupgrade -F` at first flash.
-- **LEDs**: **Still testing (2026-06-08)**.
 
 ## Credits
 

@@ -2,7 +2,7 @@
 
 ## ArubaOS's mechanism
 
-In ArubaOS, the proprietary `umac.ko` driver reads radio calibration **directly from the MTD ART partition** via custom code (`ol_transfer_bin_file()`), not through the standard Linux `request_firmware()` API. Confirmed by `dmesg` on a stock ArubaOS device:
+In ArubaOS, the proprietary o`umac.ko` driver reads radio calibration **directly from the MTD ART partition** via custom code (`ol_transfer_bin_file()`), not through the standard Linux `request_firmware()` API. Confirmed by `dmesg` on a stock ArubaOS device:
 
 ```
 [124.619] ol_transfer_bin_file: flash data file defined

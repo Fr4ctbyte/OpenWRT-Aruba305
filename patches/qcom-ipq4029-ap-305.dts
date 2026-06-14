@@ -1,78 +1,59 @@
 // SPDX-License-Identifier: GPL-2.0-only OR MIT
-/*
- * Aruba AP-305 / IAP-305
- *
- * Hardware:
- *  - SoC: Qualcomm IPQ4029 (codename Glenmorangie)
- *  - 2.4 GHz radio: IPQ4019 integrated (AHB wifi0, chip_id 0xb, codename Dakota)
- *  - 5 GHz radio:   Qualcomm QCA9990 / AR900B hw2.0 on PCIe (wifi2 = wifi@1,0,
- *                   chip_id 0x9, devid 168c:0040, codename Beeliner)
- *  - NAND 128 MiB Macronix MX30LF1G18AC
- *  - SPI NOR 4 MiB Macronix MX25R3235F
- *  - 512 MiB RAM
- *
- * Differences vs AP-365:
- *  - AP-365 uses both IPQ4019 integrated radios (wifi0+wifi1, AHB);
- *    AP-305 uses only wifi0 (2.4 GHz) and disables wifi1.
- *  - AP-305 adds an external QCA9990 PCIe radio for 5 GHz.
- *  - Aruba's calibration for the QCA9990 lives in the ART partition at
- *    offset 0x9000 (vs 0x5000 used by the AP-365's second AHB radio).
- *
- * Same SPI NOR partition layout as AP-365 (confirmed by /proc/mtd dump).
- *
- * LED / GPIO map corrected from the ArubaOS Glenmorangie device tree
- * (kernel-extracted-aos-full-31M.itb -> aruba_pin_mux/led = 37,42,51,52,61,68)
- * and verified live on an IAP-305 by toggling GPIOs:
- *   - gpio42 = system LED amber   (active high)   [confirmed]
- *   - gpio68 = system LED green   (active high)   [inferred, verify on boot]
- *   - gpio51 = wifi   LED green   (active high)   [confirmed]
- *   - gpio61 = wifi   LED amber   (active high)   [confirmed]
- * The previous 46/49/61 LEDs were inherited from the AP-365 DTS and are WRONG
- * for the AP-305. gpio42 is NOT a PHY reset (the old hog forced the amber on);
- * the real PHY reset/enable is gpio47 (held high), hogged below.
- */
 
 #include "qcom-ipq4029-aruba-glenmorangie.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "Aruba AP-305";
 	compatible = "aruba,ap-305";
 
 	aliases {
-		led-boot = &led_system_amber;
-		led-failsafe = &led_system_amber;
-		led-running = &led_system_green;
-		led-upgrade = &led_system_amber;
+		led-boot = &led_status_green;
+		led-failsafe = &led_status_red;
+		led-running = &led_status_green;
+		led-upgrade = &led_status_amber;
 	};
 
 	leds {
 		compatible = "gpio-leds";
 
-		led_system_amber: system-amber {
-			label = "amber:system";
+		led_status_green: led-0 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&tlmm 37 GPIO_ACTIVE_HIGH>;
+		};
+
+		led_status_red: led-1 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&tlmm 52 GPIO_ACTIVE_HIGH>;
+		};
+
+		led_status_amber: led-2 {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_AMBER>;
 			gpios = <&tlmm 42 GPIO_ACTIVE_HIGH>;
 		};
 
-		led_system_green: system-green {
-			label = "green:system";
-			/* INFERRED by elimination from ArubaOS LED pin list;
-			 * confirm on first boot (system LED should be green).
-			 * gpio68 is in the inherited nand pin group but, like
-			 * gpio61, leds-gpio claims it as a plain GPIO. */
+		led-3 {
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&tlmm 51 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "phy1tpt";	/* 5 GHz */
+		};
+
+		led-4 {
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_RED>;
 			gpios = <&tlmm 68 GPIO_ACTIVE_HIGH>;
 		};
 
-		wifi-green {
-			label = "green:wifi";
-			gpios = <&tlmm 51 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "phy1tpt";	/* 5 GHz activity */
-		};
-
-		wifi-amber {
-			label = "amber:wifi";
+		led-5 {
+			function = LED_FUNCTION_WLAN;
+			color = <LED_COLOR_ID_AMBER>;
 			gpios = <&tlmm 61 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "phy0tpt";	/* 2.4 GHz activity */
+			linux,default-trigger = "phy0tpt";	/* 2.4 GHz */
 		};
 	};
 
@@ -87,21 +68,30 @@
 
 &tlmm {
 	/*
-	 * GPIO map (AP-305 / Glenmorangie), corrected:
-	 *   3  - out - watchdog poke (linked above)
-	 *   38 - out - PCIe PERST# (declared on &pcie0 below)
-	 *   39 - out - "reset watchdog status flipflop" (Aruba) - leave alone
-	 *   40 - out - "enable watchdog" (Aruba) - leave alone
-	 *   42 - out - system amber LED (was wrongly hogged as phy-reset)
-	 *   47 - out - PHY reset/enable (active high, held high) - hogged below
-	 *   50 - in  - reset button (declared in glenmorangie.dtsi)
-	 *   51 - out - wifi green LED
-	 *   61 - out - wifi amber LED
-	 *   68 - out - system green LED (inferred)
+	 * In addition to the pins declared below, the following GPIOs
+	 * have Aruba-specific "features":
+	 * 3  - out - watchdog poke (linked to the watchdog node above)
+	 * 39 - out - pulse low to reset watchdog status flipflop
+	 * 40 - out - active high to enable watchdog
 	 */
+
 	phy-reset {
 		line-name = "PHY-reset";
 		gpios = <47 GPIO_ACTIVE_HIGH>;
+		gpio-hog;
+		output-high;
+	};
+
+	usb-power {
+		line-name = "USB-power";
+		gpios = <18 GPIO_ACTIVE_HIGH>;
+		gpio-hog;
+		output-high;
+	};
+
+	gpio49 {
+		line-name = "gpio49-stock-high";
+		gpios = <49 GPIO_ACTIVE_HIGH>;
 		gpio-hog;
 		output-high;
 	};
@@ -187,28 +177,17 @@
 					#address-cells = <1>;
 					#size-cells = <1>;
 
-					/* 2.4 GHz IPQ4019 AHB radio (wifi0).
-					 * Header observed: 20 2F 7F 5B 01 01 ...
-					 * len=0x2F20 (12064), crc=0x5B7F (matches Aruba
-					 * qc98xx_verify_checksum log).
-					 */
+					/* 2.4 GHz (wifi0) */
 					precal_art_1000: precal@1000 {
 						reg = <0x1000 0x2f20>;
 					};
 
-					/* Dummy cell required by parent DTSI which
-					 * references precal_art_5000 from &wifi1.
-					 * We disable wifi1 below so this is never read.
-					 */
+					/* unused: wifi1 is disabled; kept because the DTSI references it */
 					precal_art_5000: precal@5000 {
 						reg = <0x5000 0x2f20>;
 					};
 
-					/* 5 GHz QCA9990 PCIe radio (wifi2).
-					 * Header observed: 20 2F DC 1C 01 01 ...
-					 * len=0x2F20 (12064), crc=0x1CDC (matches Aruba
-					 * qc98xx_verify_checksum log).
-					 */
+					/* 5 GHz (wifi2, QCA9990) */
 					precal_art_9000: precal@9000 {
 						reg = <0x9000 0x2f20>;
 					};
@@ -271,9 +250,7 @@
 };
 
 &wifi1 {
-	/* AP-305 does not wire the IPQ4019's integrated 5 GHz AHB radio.
-	 * 5 GHz is provided by the external QCA9990 PCIe chip (wifi2).
-	 */
+	/* unused on AP-305; 5 GHz is the external QCA9990 on PCIe (wifi2) */
 	status = "disabled";
 };
 
@@ -293,12 +270,33 @@
 			status = "okay";
 			reg = <0x00010000 0 0 0 0>;
 
-			/* QCA9990 / AR900B hw2.0 — 5 GHz.
-			 * pre-calibration read from ART @ 0x9000 (12064 bytes).
-			 */
+			/* QCA9990 5 GHz */
 			nvmem-cell-names = "pre-calibration", "mac-address";
 			nvmem-cells = <&precal_art_9000>, <&macaddr_mfginfo_1d 2>;
 			qcom,ath10k-calibration-variant = "Aruba-AP-305";
 		};
 	};
+};
+
+/* USB 3.0 host: usb3 controller with hs + ss phys; VBUS enabled by the gpio18 hog above */
+/ {
+	soc {
+		tcsr@194b000 {
+			compatible = "qcom,tcsr";
+			reg = <0x194b000 0x100>;
+			qcom,usb-hsphy-mode-select = <TCSR_USB_HSPHY_HOST_MODE>;
+		};
+	};
+};
+
+&usb3 {
+	status = "okay";
+};
+
+&usb3_hs_phy {
+	status = "okay";
+};
+
+&usb3_ss_phy {
+	status = "okay";
 };

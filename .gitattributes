@@ -28,4 +28,7 @@ SHA256SUMS   text eol=lf
 *.zip        binary
 *.7z         binary
 *.ko         binary
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
 manifest     text eol=lf
