@@ -46,7 +46,7 @@ Two paths depending on what's currently on the AP:
 
 ### First time on a stock ArubaOS AP
 
-TFTP RAM-boot the AP-305 **ramboot** image (the `...initramfs-uImage.itb` from the [latest release](https://github.com/Fr4ctbyte/openwrt/releases/latest)) over the serial console, then flash the base image to NAND with `sysupgrade`.
+TFTP RAM-boot the AP-305 **ramboot** image (the `...initramfs-uImage.itb` from the [latest release](https://github.com/Fr4ctbyte/OpenWRT-Aruba305/releases/latest)) over the serial console, then flash the base image to NAND with `sysupgrade`.
 
 > ⚠️ **The ramboot file must be renamed to `ipq40xx.ari` for TFTP to work.** APBoot always fetches one fixed filename.
 
@@ -74,13 +74,13 @@ The official OpenWrt [AP-303 install procedure](https://openwrt.org/toh/aruba/ap
 ### From any running OpenWrt → flash the AP-305 image
 
 ```sh
-wget https://github.com/Fr4ctbyte/openwrt/releases/latest/download/openwrt-ipq40xx-generic-aruba_ap-305-squashfs-sysupgrade.bin -O /tmp/sysupgrade.bin
+wget https://github.com/Fr4ctbyte/OpenWRT-Aruba305/releases/latest/download/openwrt-ipq40xx-generic-aruba_ap-305-squashfs-sysupgrade.bin -O /tmp/sysupgrade.bin
 sysupgrade -F -n /tmp/sysupgrade.bin
 # -F : required because the compatible string changes (e.g. aruba,ap-365 → aruba,ap-305)
 # -n : do not preserve config (target differs)
 ```
 
-Prebuilt images live on the [releases page of my OpenWrt fork](https://github.com/Fr4ctbyte/openwrt/releases):
+Prebuilt images live on the [releases page of this documentation repo](https://github.com/Fr4ctbyte/OpenWRT-Aruba305/releases):
 - `...squashfs-sysupgrade.bin` — the **base** image (device defaults + LuCI), for flashing to NAND
 - `...initramfs-uImage.itb` (a.k.a. `ipq40xx.ari`) — the **ramboot** image (minimal, <8 MB), for TFTP RAM boot without touching the flash
 
@@ -104,19 +104,29 @@ iw phy
 
 ```
 .
-├── README.md                       this file
-├── LICENSE                         GPL-2.0-only (same as OpenWrt)
+├── README.md                            this file
+├── AGENTS.md                            local AI guardrails for this public repo
+├── REPO_MEMORY.md                       durable repo-role memory
+├── LICENSE                              GPL-2.0-only (same as OpenWrt)
+├── docs/                                public device documentation
+│   ├── hardware.md
+│   ├── calibration-mechanism.md
+│   ├── installation.md
+│   ├── verifying-cal.md
+│   └── maintainers/                     workflows and upstream-prep notes
 ├── patches/
-│   ├── 0001-aruba-ap-305-support.patch  combined patch (apply with `git apply`)
-│   └── qcom-ipq4029-ap-305.dts          standalone DTS, if you'd rather drop it in by hand
-├── configs/                        build-config seeds (expand with `make defconfig`)
-│   ├── base.config                      device defaults + LuCI — the public sysupgrade image
-│   └── ramboot.config                   minimal initramfs (<8 MB, XZ) for TFTP RAM boot
-└── docs/
-    ├── hardware.md                 detailed hardware identification
-    ├── calibration-mechanism.md    how Aruba stores radio calibration in ART
-    ├── installation.md             flashing procedure (long form)
-    └── verifying-cal.md            how to verify your device's calibration is read
+│   ├── README.md
+│   ├── upstream/                        clean exported patch material
+│   └── archive/                         historical references, not PR-ready
+├── configs/
+│   ├── README.md
+│   └── public/                          public build-config seeds
+├── release-notes/                       release note drafts and published notes
+├── releases/                            manifests, checksums, release metadata
+│   ├── checksums/
+│   ├── manifests/
+│   └── artifacts/                       README only; binaries stay off Git
+└── staging/                             ignored handoff area for local exports
 ```
 
 ## Build from source
@@ -134,14 +144,14 @@ Then add the AP-305 support — pick one of the two:
 **Option 1 — Apply the patch (one command):**
 
 ```sh
-git apply /path/to/this-repo/patches/0001-aruba-ap-305-support.patch
+git apply /path/to/this-repo/patches/upstream/0001-aruba-ap-305-support.patch
 ```
 
 **Option 2 — Drop in the files by hand (if you want to see what changes):**
 
 ```sh
 # 1. Copy the DTS into the tree:
-cp /path/to/this-repo/patches/qcom-ipq4029-ap-305.dts \
+cp /path/to/this-repo/patches/upstream/qcom-ipq4029-ap-305.dts \
    target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/
 
 # 2. Register the device profile in image/generic.mk:
@@ -218,4 +228,3 @@ The AP-365's LED nodes (gpio 46/49/61) and a `phy-reset` GPIO-hog on gpio42 were
 ## License
 
 GPL-2.0-only, matching the OpenWrt project license. See [LICENSE](LICENSE).
-
